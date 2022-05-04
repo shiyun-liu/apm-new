@@ -1,4 +1,5 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Subscription } from "rxjs";
 import { IProduct } from "./product";
 import { ProductService } from "./product.service";
 
@@ -7,11 +8,14 @@ import { ProductService } from "./product.service";
     templateUrl: './product-list.component.html',
     styleUrls : ['./product-list.component.css']
   })
-export class ProductListComponent implements OnInit{
+export class ProductListComponent implements OnInit, OnDestroy{
     pageTitle  = 'Product List'; //will infer data type automatically, don't need pageTitle : string
     imageWidth = 50;
     imageMargin = 2;
     showImage : boolean = false;
+    errorMessage : string = '';
+    sub!: Subscription;
+
     private _listFilter : string = '';
     get listFilter() : string {
       return this._listFilter;
@@ -28,13 +32,20 @@ export class ProductListComponent implements OnInit{
       //depedency injection
       constructor(private productService : ProductService) {}
 
+
       toggleImage() : void {
         this.showImage = !this.showImage;
       }
 
       ngOnInit(): void {
-          this.products = this.productService.getProducts();
-          this.filteredProducts = this.products;
+          this.sub = this.productService.getProducts().subscribe({
+            next : products => {
+              this.products = products;
+              this.filteredProducts = this.products;
+            },
+            error : err => this.errorMessage = err
+          });
+          
       }
 
       performFilter(filteredBy : string) : IProduct[] {
@@ -44,5 +55,9 @@ export class ProductListComponent implements OnInit{
 
       onRatingClicked(message : string) : void {
         this.pageTitle = 'Product List: ' + message;
+      }
+
+      ngOnDestroy(): void {
+        this.sub.unsubscribe();
       }
 }
